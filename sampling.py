@@ -490,10 +490,18 @@ class LorasForFluxParamsV2:
     """Enhanced LoRA params with dynamic expandable interface"""
     
     @classmethod
-    def INPUT_TYPES(s):
+    def INPUT_TYPES(cls, context=None):
         max_lora_num = 10
         available_loras = ["None"] + folder_paths.get_filename_list("loras")
-        
+        # Valor padrão
+        num_loras = 1
+        if context and "num_loras" in context:
+            try:
+                num_loras = int(context["num_loras"])
+            except Exception:
+                num_loras = 1
+        num_loras = max(1, min(num_loras, max_lora_num))
+
         inputs = {
             "required": {
                 "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled", "default": True}),
@@ -503,8 +511,8 @@ class LorasForFluxParamsV2:
             "optional": {},
         }
 
-        # Add dynamic LoRA inputs - seguindo o padrão do ComfyUI-Easy-Use
-        for i in range(1, max_lora_num + 1):
+        # Só adiciona os campos até num_loras
+        for i in range(1, num_loras + 1):
             inputs["optional"][f"lora_{i}_name"] = (available_loras, {"default": "None"})
             inputs["optional"][f"lora_{i}_strength"] = ("STRING", {
                 "default": "1.0", 

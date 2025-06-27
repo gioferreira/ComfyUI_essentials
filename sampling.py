@@ -487,21 +487,12 @@ class FluxSamplerParams:
         return (out_latent, out_params)
 
 class LorasForFluxParamsV2:
-    """Enhanced LoRA params with dynamic expandable interface"""
-    
+    """Enhanced LoRA params with dynamic expandable interface (Easy-Use style)"""
     @classmethod
     def INPUT_TYPES(cls, context=None):
         max_lora_num = 10
         available_loras = ["None"] + folder_paths.get_filename_list("loras")
-        # Valor padrão
-        num_loras = 1
-        if context and "num_loras" in context:
-            try:
-                num_loras = int(context["num_loras"])
-            except Exception:
-                num_loras = 1
-        num_loras = max(1, min(num_loras, max_lora_num))
-
+        # Sempre declara todos os slots possíveis
         inputs = {
             "required": {
                 "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled", "default": True}),
@@ -510,9 +501,8 @@ class LorasForFluxParamsV2:
             },
             "optional": {},
         }
-
-        # Só adiciona os campos até num_loras
-        for i in range(1, num_loras + 1):
+        # Sempre adiciona todos os campos até o máximo
+        for i in range(1, max_lora_num + 1):
             inputs["optional"][f"lora_{i}_name"] = (available_loras, {"default": "None"})
             inputs["optional"][f"lora_{i}_strength"] = ("STRING", {
                 "default": "1.0", 
@@ -530,24 +520,20 @@ class LorasForFluxParamsV2:
             return ({"loras": [], "strengths": []},)
 
         output = {"loras": [], "strengths": []}
-
-        # Process individual LoRA inputs - similar ao padrão do Easy-Use
+        max_lora_num = 10
+        num_loras = max(1, min(num_loras, max_lora_num))
+        # Only use the first num_loras slots
         for i in range(1, num_loras + 1):
             lora_name = kwargs.get(f"lora_{i}_name", "None")
             lora_strength_str = kwargs.get(f"lora_{i}_strength", "1.0")
-
             if not lora_name or lora_name == "None":
                 continue
-
-            # Parse strengths
             try:
                 if strength_mode == "single":
-                    # Single strength per LoRA
                     strength = float(lora_strength_str.strip())
                     output["loras"].append(lora_name)
                     output["strengths"].append(strength)
                 else:
-                    # Multiple strengths per LoRA (comma-separated)
                     strengths = parse_string_to_list(lora_strength_str)
                     for strength in strengths:
                         output["loras"].append(lora_name)
@@ -556,10 +542,8 @@ class LorasForFluxParamsV2:
                 logging.warning(f"Invalid strength for LoRA {lora_name}: {lora_strength_str}, using 1.0")
                 output["loras"].append(lora_name)
                 output["strengths"].append(1.0)
-
         if output["loras"]:
             logging.info(f"Created {len(output['loras'])} LoRA combinations from {len(set(output['loras']))} unique LoRAs")
-        
         return (output,)
 
 

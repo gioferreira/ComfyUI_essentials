@@ -487,64 +487,77 @@ class FluxSamplerParams:
         return (out_latent, out_params)
 
 class LorasForFluxParamsV2:
-    """Enhanced LoRA params that allows testing multiple different LoRAs against each other"""
+    """Enhanced LoRA params with dynamic expandable interface"""
+    
     @classmethod
     def INPUT_TYPES(s):
-        return {
+        max_lora_num = 10
+        available_loras = ["None"] + folder_paths.get_filename_list("loras")
+        
+        inputs = {
             "required": {
-                "lora_names": ("STRING", { 
-                    "multiline": True, 
-                    "dynamicPrompts": False, 
-                    "default": "lora1.safetensors\nlora2.safetensors\nlora3.safetensors",
-                    "tooltip": "List of LoRA names, one per line. Use 'none' to skip."
-                }),
-                "strengths": ("STRING", { 
-                    "multiline": False, 
-                    "dynamicPrompts": False, 
-                    "default": "1.0, 0.8, 1.2",
-                    "tooltip": "Comma-separated strengths. Can use multiple values per LoRA like '1.0,0.8' for variations."
-                }),
-            }
+                "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled", "default": True}),
+                "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
+                "strength_mode": (["single", "multiple"], {"default": "single", "tooltip": "Single: one strength per LoRA, Multiple: comma-separated strengths per LoRA"}),
+            },
+            "optional": {
+                "optional_lora_stack": ("LORA_PARAMS_V2",),
+            },
         }
+
+        # Add dynamic LoRA inputs
+        for i in range(1, max_lora_num + 1):
+            inputs["optional"][f"lora_{i}_name"] = (available_loras, {"default": "None"})
+            inputs["optional"][f"lora_{i}_strength"] = ("STRING", {
+                "default": "1.0", 
+                "tooltip": "Single strength or comma-separated values like '1.0,0.8,1.2'"
+            })
+
+        return inputs
 
     RETURN_TYPES = ("LORA_PARAMS_V2", )
     FUNCTION = "execute"
     CATEGORY = "essentials/sampling"
 
-    def execute(self, lora_names, strengths):
-        # Parse LoRA names (one per line)
-        lora_list = [name.strip() for name in lora_names.split('\n') if name.strip() and name.strip().lower() != 'none']
-        
-        # Parse strengths (comma-separated, can be multiple per LoRA)
-        strength_values = parse_string_to_list(strengths)
-        
-        if not lora_list:
+    def execute(self, toggle, num_loras, strength_mode, optional_lora_stack=None, **kwargs):
+        if not toggle:
             return ({"loras": [], "strengths": []},)
-        
-        # Available LoRAs for validation
-        available_loras = folder_paths.get_filename_list("loras")
-        
-        # Filter valid LoRAs
-        valid_loras = []
-        for lora in lora_list:
-            if lora in available_loras:
-                valid_loras.append(lora)
-            else:
-                logging.warning(f"LoRA '{lora}' not found in available LoRAs")
-        
-        if not valid_loras:
-            logging.warning("No valid LoRAs found")
-            return ({"loras": [], "strengths": []},)
-        
-        # Create combinations: each LoRA with each strength
+
         output = {"loras": [], "strengths": []}
-        
-        for lora in valid_loras:
-            for strength in strength_values:
-                output["loras"].append(lora)
-                output["strengths"].append(strength)
-        
-        logging.info(f"Created {len(output['loras'])} LoRA combinations from {len(valid_loras)} LoRAs and {len(strength_values)} strengths")
+
+        # Import from optional stack first
+        if optional_lora_stack is not None and optional_lora_stack["loras"]:
+            output["loras"].extend(optional_lora_stack["loras"])
+            output["strengths"].extend(optional_lora_stack["strengths"])
+
+        # Process individual LoRA inputs
+        for i in range(1, num_loras + 1):
+            lora_name = kwargs.get(f"lora_{i}_name", "None")
+            lora_strength_str = kwargs.get(f"lora_{i}_strength", "1.0")
+
+            if not lora_name or lora_name == "None":
+                continue
+
+            # Parse strengths
+            try:
+                if strength_mode == "single":
+                    # Single strength per LoRA
+                    strength = float(lora_strength_str.strip())
+                    output["loras"].append(lora_name)
+                    output["strengths"].append(strength)
+                else:
+                    # Multiple strengths per LoRA (comma-separated)
+                    strengths = parse_string_to_list(lora_strength_str)
+                    for strength in strengths:
+                        output["loras"].append(lora_name)
+                        output["strengths"].append(strength)
+            except (ValueError, TypeError):
+                logging.warning(f"Invalid strength for LoRA {lora_name}: {lora_strength_str}, using 1.0")
+                output["loras"].append(lora_name)
+                output["strengths"].append(1.0)
+
+        if output["loras"]:
+            logging.info(f"Created {len(output['loras'])} LoRA combinations from {len(set(output['loras']))} unique LoRAs")
         
         return (output,)
 

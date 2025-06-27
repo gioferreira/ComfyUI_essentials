@@ -492,7 +492,6 @@ class LorasForFluxParamsV2:
     def INPUT_TYPES(cls, context=None):
         max_lora_num = 10
         available_loras = ["None"] + folder_paths.get_filename_list("loras")
-        # Sempre declara todos os slots possíveis
         inputs = {
             "required": {
                 "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled", "default": True}),
@@ -501,14 +500,13 @@ class LorasForFluxParamsV2:
             },
             "optional": {},
         }
-        # Sempre adiciona todos os campos até o máximo
+        # Easy-Use style: lora_1, strength_1, lora_2, strength_2, ...
         for i in range(1, max_lora_num + 1):
-            inputs["optional"][f"lora_{i}_name"] = (available_loras, {"default": "None"})
-            inputs["optional"][f"lora_{i}_strength"] = ("STRING", {
+            inputs["optional"][f"lora_{i}"] = (available_loras, {"default": "None"})
+            inputs["optional"][f"strength_{i}"] = ("STRING", {
                 "default": "1.0", 
                 "tooltip": "Single strength or comma-separated values like '1.0,0.8,1.2'"
             })
-
         return inputs
 
     RETURN_TYPES = ("LORA_PARAMS_V2", )
@@ -518,14 +516,12 @@ class LorasForFluxParamsV2:
     def execute(self, toggle, num_loras, strength_mode, **kwargs):
         if not toggle:
             return ({"loras": [], "strengths": []},)
-
         output = {"loras": [], "strengths": []}
         max_lora_num = 10
         num_loras = max(1, min(num_loras, max_lora_num))
-        # Only use the first num_loras slots
         for i in range(1, num_loras + 1):
-            lora_name = kwargs.get(f"lora_{i}_name", "None")
-            lora_strength_str = kwargs.get(f"lora_{i}_strength", "1.0")
+            lora_name = kwargs.get(f"lora_{i}", "None")
+            lora_strength_str = kwargs.get(f"strength_{i}", "1.0")
             if not lora_name or lora_name == "None":
                 continue
             try:

@@ -500,12 +500,10 @@ class LorasForFluxParamsV2:
                 "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
                 "strength_mode": (["single", "multiple"], {"default": "single", "tooltip": "Single: one strength per LoRA, Multiple: comma-separated strengths per LoRA"}),
             },
-            "optional": {
-                "optional_lora_stack": ("LORA_PARAMS_V2",),
-            },
+            "optional": {},
         }
 
-        # Add dynamic LoRA inputs
+        # Add dynamic LoRA inputs - seguindo o padrão do ComfyUI-Easy-Use
         for i in range(1, max_lora_num + 1):
             inputs["optional"][f"lora_{i}_name"] = (available_loras, {"default": "None"})
             inputs["optional"][f"lora_{i}_strength"] = ("STRING", {
@@ -519,18 +517,13 @@ class LorasForFluxParamsV2:
     FUNCTION = "execute"
     CATEGORY = "essentials/sampling"
 
-    def execute(self, toggle, num_loras, strength_mode, optional_lora_stack=None, **kwargs):
+    def execute(self, toggle, num_loras, strength_mode, **kwargs):
         if not toggle:
             return ({"loras": [], "strengths": []},)
 
         output = {"loras": [], "strengths": []}
 
-        # Import from optional stack first
-        if optional_lora_stack is not None and optional_lora_stack["loras"]:
-            output["loras"].extend(optional_lora_stack["loras"])
-            output["strengths"].extend(optional_lora_stack["strengths"])
-
-        # Process individual LoRA inputs
+        # Process individual LoRA inputs - similar ao padrão do Easy-Use
         for i in range(1, num_loras + 1):
             lora_name = kwargs.get(f"lora_{i}_name", "None")
             lora_strength_str = kwargs.get(f"lora_{i}_strength", "1.0")

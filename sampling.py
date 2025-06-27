@@ -505,7 +505,7 @@ class LorasForFluxParamsV2:
         inputs = {
             "required": {
                 "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled", "default": True}),
-                "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
+                "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num, "refresh_on_change": True}),
                 "strength_mode": (["single", "multiple"], {"default": "single", "tooltip": "Single: one strength per LoRA, Multiple: comma-separated strengths per LoRA"}),
             },
             "optional": {},

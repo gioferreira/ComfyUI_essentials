@@ -489,32 +489,27 @@ class FluxSamplerParams:
 class LorasForFluxParamsV2:
     """Enhanced LoRA params with dynamic expandable interface (Easy-Use style)"""
     @classmethod
-    def INPUT_TYPES(cls, context=None):
+    def INPUT_TYPES(cls):
         max_lora_num = 10
         available_loras = ["None"] + folder_paths.get_filename_list("loras")
-        # figure out how many slots the user really wants
-        num = 1
-        if context and "num_loras" in context:
-            try:
-                num = int(context["num_loras"])
-            except Exception:
-                num = 1
-            num = max(1, min(max_lora_num, num))
+        
         inputs = {
             "required": {
                 "toggle": ("BOOLEAN", {"label_on": "enabled", "label_off": "disabled", "default": True}),
-                "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num, "refresh_on_change": True}),
+                "num_loras": ("INT", {"default": 1, "min": 1, "max": max_lora_num}),
                 "strength_mode": (["single", "multiple"], {"default": "single", "tooltip": "Single: one strength per LoRA, Multiple: comma-separated strengths per LoRA"}),
             },
             "optional": {},
         }
-        # only register as many slots as the user asked for
-        for i in range(1, num + 1):
+
+        # IMPORTANT: Define all 10 potential slots for the JavaScript to find
+        for i in range(1, max_lora_num + 1):
             inputs["optional"][f"lora_{i}"] = (available_loras, {"default": "None"})
             inputs["optional"][f"strength_{i}"] = ("STRING", {
-                "default": "1.0",
+                "default": "1.0", 
                 "tooltip": "Single strength or comma-separated values like '1.0,0.8,1.2'"
             })
+            
         return inputs
 
     RETURN_TYPES = ("LORA_PARAMS_V2", )

@@ -551,8 +551,8 @@ class ImageTile:
             }
         }
 
-    RETURN_TYPES = ("IMAGE", "INT", "INT", "INT", "INT")
-    RETURN_NAMES = ("IMAGE", "tile_width", "tile_height", "overlap_x", "overlap_y",)
+    RETURN_TYPES = ("IMAGE", "MASK", "INT", "INT", "INT", "INT")
+    RETURN_NAMES = ("IMAGE", "MASK", "tile_width", "tile_height", "overlap_x", "overlap_y",)
     FUNCTION = "execute"
     CATEGORY = "essentials/image manipulation"
 
@@ -573,8 +573,9 @@ class ImageTile:
             overlap_h = 0
         if cols == 1:
             overlap_w = 0
-        
+
         tiles = []
+        masks = []
         for i in range(rows):
             for j in range(cols):
                 y1 = i * tile_h
@@ -596,9 +597,17 @@ class ImageTile:
                     x1 = x2 - tile_w - overlap_w
 
                 tiles.append(image[:, y1:y2, x1:x2, :])
-        tiles = torch.cat(tiles, dim=0)
 
-        return(tiles, tile_w+overlap_w, tile_h+overlap_h, overlap_w, overlap_h,)
+                mask = torch.zeros((1, h, w), dtype=torch.float32)
+                mask[:, y1:y2, x1:x2] = 1.0
+                masks.append(mask)
+
+        tiles = torch.cat(tiles, dim=0)
+        masks = torch.cat(masks, dim=0)
+
+        return tiles, masks, tile_w + overlap_w, tile_h + overlap_h, overlap_w, overlap_h
+
+
 
 class ImageUntile:
     @classmethod

@@ -6,7 +6,7 @@ app.registerExtension({
 
     async beforeRegisterNodeDef(nodeType, nodeData, app) {
         // Check if the current node is the one we want to modify
-        if (nodeData.name === "LorasForFluxParamsV2+") {
+        if (nodeData.name === "LorasForFluxParams+") {
             
             // Get the original onNodeCreated function to chain it
             const onNodeCreated = nodeType.prototype.onNodeCreated;
